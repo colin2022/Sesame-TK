@@ -1,0 +1,57 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 每6小时检查一次（可调整）
+  workflow_dispatch:        # 支持手动触发
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # 需要写入权限执行git push
+
+    steps:
+    - name: Checkout Current Repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0     # 获取全部历史记录
+
+    - name: Get Upstream Updates
+      run: |
+        # 添加上游仓库地址（替换为你的实际URL）
+        git remote add upstream https://github.com/Fansirsqi/Sesame-TK.git
+        
+        # 获取上游更新
+        git fetch upstream
+
+    - name: Sync Changes
+      id: sync
+      run: |
+        # 检查上游是否有新提交
+        if [ $(git rev-parse HEAD) != $(git rev-parse upstream/main) ]; then
+          # 重置到上游代码 (强制同步)
+          git reset --hard upstream/main
+          
+          # 推送更新到当前仓库
+          git push -f origin HEAD:main
+          
+          # 设置标志通知需要运行构建
+          echo "should_build=true" >> $GITHUB_OUTPUT
+        else
+          echo "No changes found"
+          echo "should_build=false" >> $GITHUB_OUTPUT
+        fi
+
+    # 触发android.yml工作流
+    - name: Trigger Android Build
+      if: ${{ steps.sync.outputs.should_build == 'true' }}
+      uses: actions/github-script@v7
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'android.yml',  # 确保文件名匹配
+            ref: 'main',                 # 目标分支
+          })
