@@ -3,6 +3,8 @@ on:
   schedule:
     - cron: '0 * * * *'  # 每小时检查一次
   push:  # 或通过 push 事件触发
+  workflow_dispatch:
+  
 jobs:
   check-updates:
     runs-on: ubuntu-latest
