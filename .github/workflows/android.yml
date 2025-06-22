@@ -9,10 +9,7 @@ on:
     types: [published]
   workflow_dispatch:
   workflow_call:
-    inputs:
-      target_env:
-        required: true
-        type: string
+
         
 jobs:
   build:
